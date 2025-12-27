@@ -151,7 +151,7 @@
             </div>
             
             <div id="adminDashTrigger" class="hidden px-4 pb-4">
-                <button onclick="openAdminDashboard()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                <button onclick="window.openAdminDashboard()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                     <i data-lucide="command" class="w-3 h-3"></i> Admin Console
                 </button>
             </div>
@@ -209,20 +209,14 @@
 
     <!-- Admin Console -->
     <div id="adminDashboardModal" class="modal-overlay">
-        <div class="bg-slate-900 border border-white/10 rounded-[2.5rem] w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col">
+        <div class="bg-slate-900 border border-white/10 rounded-[2.5rem] w-full max-w-2xl h-[70vh] overflow-hidden flex flex-col">
             <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/20">
                 <h2 class="text-xl font-black uppercase tracking-tighter text-white">Ghost Registry</h2>
                 <button onclick="closeModal('adminDashboardModal')" class="p-2 text-slate-400"><i data-lucide="x" class="w-6 h-6"></i></button>
             </div>
-            <div class="flex-grow overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
-                <div>
-                    <h3 class="text-xs font-black uppercase text-indigo-400 mb-4">Active Agents</h3>
-                    <div id="dashUserList" class="space-y-3 custom-scrollbar overflow-y-auto h-[50vh]"></div>
-                </div>
-                <div>
-                    <h3 class="text-xs font-black uppercase text-amber-400 mb-4">Node Controllers</h3>
-                    <div id="dashNodeList" class="space-y-3 custom-scrollbar overflow-y-auto h-[50vh]"></div>
-                </div>
+            <div class="flex-grow overflow-y-auto p-8 custom-scrollbar">
+                <h3 class="text-xs font-black uppercase text-indigo-400 mb-4">Manage Network Access</h3>
+                <div id="dashUserList" class="space-y-3"></div>
             </div>
         </div>
     </div>
@@ -268,7 +262,6 @@
             }
         };
 
-        // Handle offline on tab close
         window.addEventListener('beforeunload', () => updateStatus(false));
 
         const init = () => {
@@ -291,7 +284,10 @@
 
         async function startApp(name) {
             currentUser = name;
-            isAdmin = (name === ADMIN_NAME);
+            
+            const userSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', name));
+            isAdmin = userSnap.exists() && userSnap.data().role === 'admin';
+            
             localStorage.setItem('ghost_session', JSON.stringify({ name }));
             
             document.getElementById('loginOverlay').classList.add('hidden');
@@ -303,6 +299,9 @@
             if(isAdmin) {
                 document.getElementById('adminOnlyPlus').classList.remove('hidden');
                 document.getElementById('adminDashTrigger').classList.remove('hidden');
+            } else {
+                document.getElementById('adminOnlyPlus').classList.add('hidden');
+                document.getElementById('adminDashTrigger').classList.add('hidden');
             }
 
             await updateStatus(true);
@@ -312,7 +311,6 @@
         }
 
         function loadSidebar() {
-            // Groups
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
                 const list = document.getElementById('groupList');
                 list.innerHTML = `<button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)"><i data-lucide="globe" class="w-4 h-4"></i> Public Channel</button>`;
@@ -323,26 +321,29 @@
                 lucide.createIcons();
             });
 
-            // Users with Real-time Status
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                 const list = document.getElementById('userList');
                 list.innerHTML = `<h3 class="text-[9px] uppercase tracking-widest text-slate-500 mb-3 px-2 mt-6 font-black">Terminals</h3>`;
                 snap.forEach(d => {
                     const u = d.data();
+                    
                     if(u.username === currentUser || u.isBanned) return;
+                    
+                    // SECURITY RULE: Non-admins cannot see Admins. 
+                    // To chat with Admin, you MUST be an admin yourself.
+                    if(u.role === 'admin' && !isAdmin) return; 
                     
                     const on = u.isOnline;
                     list.innerHTML += `
                         <button class="channel-btn ${isDM && currentTarget===u.username?'active':''}" onclick="window.switchChat('${u.username}', true)">
                             <div class="status-dot ${on?'status-online':'status-offline'}"></div> 
                             <div class="flex flex-col">
-                                <span class="font-bold">${u.username}</span>
+                                <span class="font-bold">${u.username} ${u.role==='admin'?'<span class="text-[8px] text-red-500"> (Admin)</span>':''}</span>
                                 <span class="text-[7px] uppercase ${on?'text-emerald-500':'text-slate-600'}">${on?'Online':'Offline'}</span>
                             </div>
                         </button>`;
                 });
                 
-                // Update header
                 if (isDM) {
                     const t = snap.docs.find(d => d.id === currentTarget)?.data();
                     document.getElementById('targetStatus').innerText = t?.isOnline ? "Active Link" : "Offline";
@@ -352,6 +353,42 @@
                 }
             });
         }
+
+        window.openAdminDashboard = () => {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
+                const list = document.getElementById('dashUserList');
+                list.innerHTML = '';
+                snap.forEach(d => {
+                    const u = d.data();
+                    if(u.username === ADMIN_NAME) return;
+                    list.innerHTML += `
+                        <div class="flex items-center justify-between bg-black/40 p-4 rounded-2xl border border-white/5">
+                            <div>
+                                <p class="text-white font-bold text-sm">${u.username}</p>
+                                <p class="text-[10px] uppercase font-black text-slate-500">${u.role}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="toggleAdminRole('${u.username}', '${u.role}')" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${u.role==='admin'?'bg-slate-700':'bg-indigo-600'}">
+                                    ${u.role==='admin'?'Revoke Admin':'Make Admin'}
+                                </button>
+                                <button onclick="toggleBan('${u.username}', ${u.isBanned})" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-600/20 text-red-500 border border-red-500/20">
+                                    ${u.isBanned?'Unban':'Ban'}
+                                </button>
+                            </div>
+                        </div>`;
+                });
+            });
+            window.openModal('adminDashboardModal');
+        };
+
+        window.toggleAdminRole = async (username, currentRole) => {
+            const newRole = currentRole === 'admin' ? 'user' : 'admin';
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username), { role: newRole });
+        };
+
+        window.toggleBan = async (username, isBanned) => {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username), { isBanned: !isBanned });
+        };
 
         window.switchChat = (target, dm) => {
             currentTarget = target;
@@ -405,7 +442,6 @@
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), data);
         };
 
-        // Authentication Logic
         document.getElementById('authBtn').onclick = async () => {
             const user = document.getElementById('authUsername').value.trim();
             const pass = document.getElementById('authPassword').value.trim();
@@ -414,9 +450,9 @@
             const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
             const snap = await getDoc(userRef);
 
-            // Admin Logic
             if (user === ADMIN_NAME && pass === ADMIN_PASS) {
                 if(!snap.exists()) await setDoc(userRef, { username: user, isBanned: false, isOnline: true, role: 'admin' });
+                else await updateDoc(userRef, { role: 'admin' });
                 startApp(user);
                 return;
             }
@@ -431,7 +467,7 @@
                 if(snap.exists()) {
                     const d = snap.data();
                     if(d.isBanned) alert("Registry Link Blocked.");
-                    else if(decrypt(d.password) === pass || (user === ADMIN_NAME && pass === ADMIN_PASS)) startApp(user);
+                    else if(decrypt(d.password) === pass) startApp(user);
                     else alert("Invalid Credentials.");
                 } else alert("Agent Unknown.");
             }
@@ -443,7 +479,6 @@
             location.reload();
         };
 
-        // UI Tabs
         document.getElementById('loginTab').onclick = () => {
             document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
             document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
@@ -451,6 +486,14 @@
         document.getElementById('signupTab').onclick = () => {
             document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
             document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
+        };
+
+        document.getElementById('confirmCreateBtn').onclick = async () => {
+            const name = document.getElementById('newGroupNameInput').value.trim();
+            if(!name) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', name), { name });
+            closeModal('createNodeModal');
+            document.getElementById('newGroupNameInput').value = '';
         };
 
         init();
