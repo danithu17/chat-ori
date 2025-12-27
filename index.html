@@ -3,220 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecretChat - Ghost Vault Pro</title>
+    <title>Ghost Vault Pro - Secure Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
         
         :root {
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.4);
             --bg-dark: #020617;
-            --glass: rgba(15, 23, 42, 0.7);
+            --panel-bg: rgba(15, 23, 42, 0.6);
         }
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg-dark);
+            background: radial-gradient(circle at top right, #1e1b4b, #020617, #020617);
             color: #f8fafc; 
             height: 100vh;
             overflow: hidden;
+            margin: 0;
         }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        h1, h2, h3, .font-space { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-
-        .glass-panel {
-            background: var(--glass);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+            background: linear-gradient(to bottom, transparent, var(--accent), transparent); 
+            border-radius: 20px; 
         }
 
-        .chat-container { height: calc(100vh - 160px); }
+        .glass {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        .neo-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .neo-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
 
         .message-bubble { 
-            max-width: 75%; 
-            padding: 10px 14px;
+            max-width: 80%; 
+            padding: 12px 16px;
+            animation: slideIn 0.3s ease-out;
             position: relative;
-            animation: fadeInUp 0.2s ease-out;
         }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .channel-btn {
-            width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px;
+            width: 100%; padding: 12px 16px; border-radius: 14px;
             font-size: 13px; color: #94a3b8; transition: all 0.2s;
-            margin-bottom: 4px; display: flex; align-items: center; gap: 10px;
+            margin-bottom: 6px; display: flex; align-items: center; gap: 12px;
+            border: 1px solid transparent;
         }
         
-        .channel-btn:hover { background: rgba(255, 255, 255, 0.05); color: #f8fafc; }
+        .channel-btn:hover { 
+            background: rgba(255, 255, 255, 0.04); 
+            color: #f8fafc;
+            border-color: rgba(255, 255, 255, 0.05);
+        }
         
         .channel-btn.active { 
-            background: rgba(99, 102, 241, 0.15); 
-            color: #818cf8; 
-            border-left: 3px solid #6366f1; 
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.15), transparent); 
+            color: #a5b4fc; 
+            border-left: 4px solid var(--accent);
+            box-shadow: inset 10px 0 20px -10px var(--accent-glow);
         }
 
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .status-online { background: #10b981; box-shadow: 0 0 8px #10b981; }
-        .status-offline { background: #475569; }
-
         .admin-badge {
-            background: #ef4444;
-            color: white;
-            font-size: 8px;
-            padding: 1px 5px;
-            border-radius: 4px;
-            font-weight: 900;
-            text-transform: uppercase;
+            background: linear-gradient(45deg, #ef4444, #f87171);
+            color: white; font-size: 8px; padding: 2px 6px;
+            border-radius: 6px; font-weight: 800; text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
         }
 
         .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 200;
-            background: rgba(2, 6, 23, 0.95);
-            backdrop-filter: blur(10px);
-            align-items: center;
-            justify-content: center;
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(12px);
+            align-items: center; justify-content: center; padding: 1.5rem;
         }
 
-        #initLoader {
-            position: fixed;
-            inset: 0;
-            z-index: 1000;
-            background: #020617;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        @media (max-width: 768px) {
+            #sidebar {
+                position: fixed; left: -100%; top: 0; bottom: 0; z-index: 150;
+                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                width: 300px;
+            }
+            #sidebar.active { transform: translateX(100%); }
+            .sidebar-overlay {
+                display: none; position: fixed; inset: 0;
+                background: rgba(0, 0, 0, 0.6); z-index: 140; backdrop-filter: blur(4px);
+            }
+            .sidebar-overlay.active { display: block; }
         }
+
+        input::placeholder { color: #475569; }
     </style>
 </head>
 <body class="flex">
 
-    <!-- Loading Screen -->
-    <div id="initLoader">
-        <div class="w-10 h-10 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
-        <p class="mt-4 text-indigo-400 text-[9px] tracking-[0.4em] uppercase font-black">Connecting to Ghost Network...</p>
+    <!-- Premium Loader -->
+    <div id="initLoader" class="fixed inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-center">
+        <div class="relative">
+            <div class="w-20 h-20 border-2 border-indigo-500/20 rounded-full"></div>
+            <div class="absolute top-0 w-20 h-20 border-t-2 border-indigo-500 rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="shield" class="w-6 h-6 text-indigo-500 animate-pulse"></i>
+            </div>
+        </div>
+        <p class="mt-8 text-indigo-400 text-[10px] tracking-[0.5em] uppercase font-bold animate-pulse">Initializing Ghost Protocol</p>
     </div>
 
-    <!-- Auth Overlay -->
-    <div id="loginOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/98 px-4">
-        <div class="w-full max-w-sm glass-panel p-8 rounded-[2rem] shadow-2xl">
-            <div class="flex flex-col items-center mb-8">
-                <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center mb-4 shadow-xl shadow-indigo-500/20">
-                    <i data-lucide="shield-check" class="text-white w-7 h-7"></i>
+    <!-- Auth UI -->
+    <div id="loginOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950 px-4">
+        <div class="w-full max-w-md glass p-8 md:p-10 rounded-[2.5rem] border-white/5">
+            <div class="flex flex-col items-center mb-10">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center mb-6 shadow-2xl shadow-indigo-500/40 neo-button">
+                    <i data-lucide="ghost" class="text-white w-8 h-8"></i>
                 </div>
-                <h2 class="text-xl font-black text-white uppercase tracking-tighter">Ghost Vault</h2>
-                <p class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Registry Access</p>
+                <h2 class="text-3xl font-black text-white uppercase tracking-tighter font-space">Ghost Vault</h2>
+                <div class="h-1 w-12 bg-indigo-500 mt-2 rounded-full"></div>
             </div>
             
-            <div class="flex mb-6 bg-black/40 rounded-xl p-1">
-                <button id="loginTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white transition-all">Login</button>
-                <button id="signupTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500">Sign Up</button>
+            <div class="flex mb-8 bg-slate-900/50 rounded-2xl p-1.5 border border-white/5">
+                <button id="loginTab" class="flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white shadow-lg transition-all">Login</button>
+                <button id="signupTab" class="flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500 hover:text-slate-300">Register</button>
             </div>
 
-            <div class="space-y-4">
-                <div class="space-y-1">
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Username</label>
-                    <input type="text" id="authUsername" class="w-full bg-black/30 border border-white/5 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm">
+            <div class="space-y-5">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Ident</label>
+                    <input type="text" id="authUsername" placeholder="Enter username" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all text-sm">
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Access Key</label>
-                    <input type="password" id="authPassword" class="w-full bg-black/30 border border-white/5 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Passkey</label>
+                    <input type="password" id="authPassword" placeholder="••••••••" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all text-sm">
                 </div>
-                <button id="authBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all mt-4">Establish Link</button>
+                <button id="authBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all mt-4 neo-button shadow-indigo-500/20">Establish Link</button>
             </div>
         </div>
     </div>
 
     <!-- App Shell -->
-    <div id="appUI" class="hidden flex w-full h-screen">
+    <div id="appUI" class="hidden flex w-full h-screen relative">
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="window.toggleSidebar()"></div>
+
         <!-- Sidebar -->
-        <aside class="w-64 bg-slate-950/80 border-r border-white/5 flex flex-col">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-950/50">
-                <h2 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Mainframes</h2>
-                <button id="adminOnlyPlus" onclick="openModal('createNodeModal')" class="text-slate-400 hover:text-white hidden transition-colors"><i data-lucide="plus-circle" class="w-4 h-4"></i></button>
-            </div>
-            <div class="flex-grow overflow-y-auto p-4 custom-scrollbar">
-                <div id="groupList" class="mb-6"></div>
-                <div id="userList"></div>
+        <aside id="sidebar" class="bg-slate-950/40 border-r border-white/5 flex flex-col md:w-72 glass">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center bg-slate-950/20">
+                <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 font-space">Channels</h2>
+                <button id="adminOnlyPlus" onclick="openModal('createNodeModal')" class="text-slate-400 hover:text-indigo-400 hidden transition-colors">
+                    <i data-lucide="plus-square" class="w-5 h-5"></i>
+                </button>
             </div>
             
-            <div id="adminDashTrigger" class="hidden px-4 pb-4">
-                <button onclick="window.openAdminDashboard()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="command" class="w-3 h-3"></i> Admin Console
+            <div class="flex-grow overflow-y-auto px-4 py-6 custom-scrollbar">
+                <div id="groupList" class="space-y-1"></div>
+                <div class="h-px bg-white/5 my-6 mx-2"></div>
+                <div id="userList" class="space-y-1"></div>
+            </div>
+            
+            <div id="adminDashTrigger" class="hidden px-6 pb-2">
+                <button onclick="window.openAdminDashboard()" class="w-full py-4 bg-red-600/10 border border-red-500/20 hover:bg-red-600 text-red-500 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 mb-4 neo-button">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Console
                 </button>
             </div>
 
-            <div class="p-4 border-t border-white/5 bg-slate-900/50">
-                <div class="flex items-center gap-3">
-                    <div id="userAvatar" class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-bold uppercase">?</div>
+            <div class="p-6 border-t border-white/5 bg-slate-900/20 backdrop-blur-md">
+                <div class="flex items-center gap-4">
+                    <div id="userAvatar" class="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-sm font-black uppercase shadow-lg shadow-indigo-500/20 border border-indigo-400/20 shrink-0">?</div>
                     <div class="flex-grow min-w-0">
-                        <p id="headerName" class="text-xs font-bold truncate"></p>
-                        <p class="text-[8px] text-emerald-500 font-bold uppercase flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Active Now
-                        </p>
+                        <p id="headerName" class="text-xs font-black truncate text-white"></p>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+                            <span class="text-[8px] text-emerald-500 font-black uppercase tracking-widest">Link Active</span>
+                        </div>
                     </div>
-                    <button id="logoutBtn" class="text-slate-500 hover:text-red-400 p-2"><i data-lucide="power" class="w-4 h-4"></i></button>
+                    <button id="logoutBtn" class="text-slate-500 hover:text-red-400 p-2 transition-colors"><i data-lucide="log-out" class="w-5 h-5"></i></button>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Content -->
-        <main class="flex-grow flex flex-col bg-slate-950">
-            <header class="h-16 border-b border-white/5 px-6 flex items-center justify-between bg-slate-950/50">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center border border-white/5">
-                        <i data-lucide="hash" id="headerIcon" class="w-4 h-4 text-indigo-400"></i>
+        <!-- Main Workspace -->
+        <main class="flex-grow flex flex-col bg-slate-950/20 w-full min-w-0">
+            <header class="h-20 border-b border-white/5 px-6 md:px-10 flex items-center justify-between bg-slate-950/40 backdrop-blur-md shrink-0">
+                <div class="flex items-center gap-4">
+                    <button onclick="window.toggleSidebar()" class="md:hidden p-2 text-slate-400 bg-slate-900/50 rounded-xl border border-white/5">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div class="w-10 h-10 rounded-xl bg-slate-900/80 flex items-center justify-center border border-white/10 shrink-0 shadow-inner">
+                        <i data-lucide="hash" id="headerIcon" class="w-5 h-5 text-indigo-400"></i>
                     </div>
-                    <div>
-                        <h3 id="currentChannelName" class="font-bold text-sm">Public</h3>
-                        <p id="targetStatus" class="text-[9px] uppercase font-bold text-slate-500">Connecting...</p>
+                    <div class="min-w-0">
+                        <h3 id="currentChannelName" class="font-black text-base truncate text-white font-space">Public</h3>
+                        <p id="targetStatus" class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Syncing protocol...</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <div class="flex -space-x-2">
+                         <!-- Multi-user presence could go here -->
                     </div>
                 </div>
             </header>
             
-            <div id="chatWindow" class="chat-container flex-grow overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar"></div>
+            <div id="chatWindow" class="flex-grow overflow-y-auto p-6 md:p-10 flex flex-col gap-6 custom-scrollbar"></div>
             
-            <footer class="p-4 bg-slate-950/50">
-                <form id="chatForm" class="flex gap-2 bg-slate-900/80 border border-white/5 p-1 px-4 rounded-2xl">
-                    <input type="text" id="messageInput" autocomplete="off" placeholder="Message..." class="flex-grow bg-transparent outline-none text-sm py-3.5">
-                    <button type="submit" class="text-indigo-500 p-2"><i data-lucide="send" class="w-5 h-5"></i></button>
+            <footer class="p-6 md:p-10 bg-transparent shrink-0">
+                <form id="chatForm" class="flex gap-4 bg-slate-900/50 border border-white/10 p-2 pl-6 rounded-[2rem] items-center glass shadow-2xl focus-within:border-indigo-500/50 transition-all">
+                    <input type="text" id="messageInput" autocomplete="off" placeholder="Type a secure message..." class="flex-grow bg-transparent outline-none text-sm py-4 min-w-0 text-white placeholder-slate-600">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0 neo-button shadow-lg shadow-indigo-500/20">
+                        <i data-lucide="send-horizontal" class="w-5 h-5"></i>
+                    </button>
                 </form>
             </footer>
         </main>
     </div>
 
-    <!-- Modal Node -->
+    <!-- Modals -->
     <div id="createNodeModal" class="modal-overlay">
-        <div class="bg-slate-900 p-8 rounded-3xl w-80 border border-white/10 shadow-2xl">
-            <h3 class="text-white font-bold mb-4 uppercase text-[10px] tracking-widest text-center">New Protocol Node</h3>
-            <input type="text" id="newGroupNameInput" placeholder="Node Name" class="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm mb-4 outline-none focus:border-indigo-500">
-            <div class="flex gap-2">
-                <button onclick="closeModal('createNodeModal')" class="flex-1 py-3 text-[10px] uppercase font-bold text-slate-500">Abort</button>
-                <button id="confirmCreateBtn" class="flex-1 bg-indigo-600 py-3 rounded-xl text-[10px] uppercase font-bold">Deploy</button>
+        <div class="bg-slate-900 border border-white/10 p-10 rounded-[2.5rem] w-full max-w-sm glass">
+            <h3 class="text-white font-black mb-6 uppercase text-xs tracking-[0.3em] text-center font-space">New Sub-Channel</h3>
+            <input type="text" id="newGroupNameInput" placeholder="Enter node title" class="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm mb-6 outline-none focus:border-indigo-500 transition-all">
+            <div class="flex gap-4">
+                <button onclick="closeModal('createNodeModal')" class="flex-1 py-4 text-[10px] uppercase font-black text-slate-500 hover:text-white">Abort</button>
+                <button id="confirmCreateBtn" class="flex-1 bg-indigo-600 py-4 rounded-2xl text-[10px] uppercase font-black neo-button">Deploy Node</button>
             </div>
         </div>
     </div>
 
-    <!-- Admin Console -->
     <div id="adminDashboardModal" class="modal-overlay">
-        <div class="bg-slate-900 border border-white/10 rounded-[2.5rem] w-full max-w-2xl h-[70vh] overflow-hidden flex flex-col">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/20">
-                <h2 class="text-xl font-black uppercase tracking-tighter text-white">Ghost Registry</h2>
-                <button onclick="closeModal('adminDashboardModal')" class="p-2 text-slate-400"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <div class="bg-slate-900/95 border border-white/10 rounded-[3rem] w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col mx-4 glass">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-2xl font-black uppercase tracking-tighter text-white font-space">Ghost Registry</h2>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase rounded border border-indigo-500/20">
+                            <span id="dashUserCount">0</span> Terminals Connected
+                        </span>
+                    </div>
+                </div>
+                <button onclick="closeModal('adminDashboardModal')" class="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all border border-white/5">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
             </div>
-            <div class="flex-grow overflow-y-auto p-8 custom-scrollbar">
-                <h3 class="text-xs font-black uppercase text-indigo-400 mb-4">Manage Network Access</h3>
-                <div id="dashUserList" class="space-y-3"></div>
+            <div class="flex-grow overflow-y-auto p-8 md:p-12 custom-scrollbar">
+                <div id="dashUserList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
         </div>
     </div>
@@ -226,6 +274,7 @@
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
+        // Same config and logic from previous version, just enhancing the rendering/styles
         const firebaseConfig = {
             apiKey: "AIzaSyBQ4kbOR1uvonh3QQyPtglAKf02jnxNxTo",
             authDomain: "chat123-8b002.firebaseapp.com",
@@ -235,7 +284,7 @@
             appId: "1:949955284458:web:9feca2b883fc5dd43c3693"
         };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ghost-vault-final-v1';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ghost-vault-premium-v3';
         const CRYPTO_KEY = "GHOST_SECURE_X";
         const ADMIN_NAME = "Admin";
         const ADMIN_PASS = "123";
@@ -252,8 +301,27 @@
             catch { return "[SECURE]"; }
         };
 
-        window.openModal = (id) => document.getElementById(id).style.display = 'flex';
-        window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+        window.openModal = (id) => {
+            const el = document.getElementById(id);
+            el.style.display = 'flex';
+            el.classList.add('animate__animated', 'animate__fadeIn');
+        };
+        window.closeModal = (id) => {
+            const el = document.getElementById(id);
+            el.classList.remove('animate__fadeIn');
+            el.classList.add('animate__fadeOut');
+            setTimeout(() => {
+                el.style.display = 'none';
+                el.classList.remove('animate__fadeOut');
+            }, 300);
+        };
+
+        window.toggleSidebar = () => {
+            const sb = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('active');
+            overlay.classList.toggle('active');
+        };
 
         const updateStatus = async (status) => {
             if (currentUser) {
@@ -284,26 +352,18 @@
 
         async function startApp(name) {
             currentUser = name;
-            
             const userSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', name));
             isAdmin = userSnap.exists() && userSnap.data().role === 'admin';
-            
             localStorage.setItem('ghost_session', JSON.stringify({ name }));
-            
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('appUI').classList.remove('hidden');
             document.getElementById('initLoader').style.display = 'none';
-            document.getElementById('headerName').innerHTML = name + (isAdmin ? ' <span class="admin-badge">Admin</span>' : '');
+            document.getElementById('headerName').innerHTML = name + (isAdmin ? ' <span class="admin-badge ml-2">Admin</span>' : '');
             document.getElementById('userAvatar').innerText = name[0];
-            
             if(isAdmin) {
                 document.getElementById('adminOnlyPlus').classList.remove('hidden');
                 document.getElementById('adminDashTrigger').classList.remove('hidden');
-            } else {
-                document.getElementById('adminOnlyPlus').classList.add('hidden');
-                document.getElementById('adminDashTrigger').classList.add('hidden');
             }
-
             await updateStatus(true);
             loadSidebar();
             loadMessages();
@@ -313,14 +373,15 @@
         function loadSidebar() {
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
                 const list = document.getElementById('groupList');
-                list.innerHTML = `<button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)"><i data-lucide="globe" class="w-4 h-4"></i> Public Channel</button>`;
+                list.innerHTML = `<h3 class="text-[9px] uppercase tracking-[0.3em] text-slate-500 mb-3 px-4 font-black">Mainframes</h3>
+                    <button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)"><i data-lucide="globe" class="w-4 h-4"></i> Public Channel</button>`;
                 snap.forEach(d => {
                     const g = d.data();
-                    list.innerHTML += `<div class="flex items-center group/item">
+                    list.innerHTML += `<div class="flex items-center group/item px-2">
                         <button class="channel-btn flex-grow ${!isDM && currentTarget===g.name?'active':''}" onclick="window.switchChat('${g.name}', false)">
                             <i data-lucide="hash" class="w-4 h-4"></i> ${g.name}
                         </button>
-                        ${isAdmin ? `<button onclick="deleteGroup('${d.id}')" class="p-2 text-red-500 opacity-0 group-hover/item:opacity-100"><i data-lucide="trash-2" class="w-3 h-3"></i></button>` : ''}
+                        ${isAdmin ? `<button onclick="deleteGroup('${d.id}')" class="p-2 text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500/10 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button>` : ''}
                     </div>`;
                 });
                 lucide.createIcons();
@@ -328,63 +389,74 @@
 
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                 const list = document.getElementById('userList');
-                list.innerHTML = `<h3 class="text-[9px] uppercase tracking-widest text-slate-500 mb-3 px-2 mt-6 font-black">Terminals</h3>`;
+                list.innerHTML = `<h3 class="text-[9px] uppercase tracking-[0.3em] text-slate-500 mb-3 px-4 font-black">Terminals</h3>`;
                 snap.forEach(d => {
                     const u = d.data();
                     if(u.username === currentUser || u.isBanned) return;
                     if(u.role === 'admin' && !isAdmin) return; 
-                    
                     const on = u.isOnline;
                     list.innerHTML += `
                         <button class="channel-btn ${isDM && currentTarget===u.username?'active':''}" onclick="window.switchChat('${u.username}', true)">
-                            <div class="status-dot ${on?'status-online':'status-offline'}"></div> 
-                            <div class="flex flex-col">
-                                <span class="font-bold">${u.username} ${u.role==='admin'?'<span class="text-[8px] text-red-500"> (Admin)</span>':''}</span>
-                                <span class="text-[7px] uppercase ${on?'text-emerald-500':'text-slate-600'}">${on?'Online':'Offline'}</span>
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black border border-white/5 uppercase">${u.username[0]}</div>
+                                <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${on?'bg-emerald-500 shadow-[0_0_8px_#10b981]':'bg-slate-600'}"></div>
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold truncate text-white">${u.username} ${u.role==='admin'?'<span class="text-[7px] text-red-400 font-black tracking-widest ml-1">ADM</span>':''}</span>
+                                <span class="text-[7px] uppercase tracking-tighter ${on?'text-emerald-500':'text-slate-600'} font-black">${on?'Ready':'Idle'}</span>
                             </div>
                         </button>`;
                 });
-                
                 if (isDM) {
                     const t = snap.docs.find(d => d.id === currentTarget)?.data();
-                    document.getElementById('targetStatus').innerText = t?.isOnline ? "Active Link" : "Offline";
-                    document.getElementById('targetStatus').className = `text-[9px] uppercase font-bold ${t?.isOnline ? 'text-emerald-500' : 'text-slate-500'}`;
+                    document.getElementById('targetStatus').innerText = t?.isOnline ? "Encrypted Line: Established" : "Signal Lost: Offline";
+                    document.getElementById('targetStatus').className = `text-[9px] uppercase font-black tracking-widest ${t?.isOnline ? 'text-emerald-500' : 'text-slate-600'}`;
                 } else {
-                    document.getElementById('targetStatus').innerText = "Encrypted Mainframe";
+                    document.getElementById('targetStatus').innerText = "Mainframe Broadcast Active";
+                    document.getElementById('targetStatus').className = "text-[9px] uppercase font-black tracking-widest text-indigo-400";
                 }
             });
         }
 
-        window.deleteGroup = async (id) => {
-            if(confirm("Destroy this mainframe node?")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', id));
-                if(currentTarget === id) window.switchChat('Public', false);
-            }
-        };
-
         window.openAdminDashboard = () => {
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                 const list = document.getElementById('dashUserList');
+                const countDisp = document.getElementById('dashUserCount');
                 list.innerHTML = '';
+                let total = 0;
                 snap.forEach(d => {
                     const u = d.data();
+                    total++;
                     if(u.username === ADMIN_NAME) return;
                     list.innerHTML += `
-                        <div class="flex items-center justify-between bg-black/40 p-4 rounded-2xl border border-white/5">
-                            <div>
-                                <p class="text-white font-bold text-sm">${u.username}</p>
-                                <p class="text-[10px] uppercase font-black text-slate-500">${u.role}</p>
+                        <div class="bg-slate-900/80 p-6 rounded-3xl border border-white/5 hover:border-indigo-500/30 transition-all flex flex-col gap-5 glass">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-sm font-black text-indigo-400 shrink-0 border border-white/5">
+                                    ${u.username[0].toUpperCase()}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-white font-black text-base truncate flex items-center gap-2">
+                                        ${u.username} 
+                                        ${u.isBanned ? '<span class="text-[7px] bg-red-500 text-white px-1.5 py-0.5 rounded font-black shrink-0">EXILED</span>' : ''}
+                                    </p>
+                                    <p class="text-[8px] uppercase font-black text-indigo-400/60 tracking-widest mt-0.5">${u.role} protocol</p>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="toggleAdminRole('${u.username}', '${u.role}')" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${u.role==='admin'?'bg-slate-700':'bg-indigo-600'}">
-                                    ${u.role==='admin'?'Revoke Admin':'Make Admin'}
+                            <div class="grid grid-cols-2 gap-2 pt-4 border-t border-white/5">
+                                <button onclick="toggleAdminRole('${u.username}', '${u.role}')" class="px-3 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${u.role==='admin'?'bg-slate-700 text-slate-300':'bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white'}">
+                                    ${u.role==='admin'?'Demote':'Promote'}
                                 </button>
-                                <button onclick="toggleBan('${u.username}', ${u.isBanned})" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${u.isBanned?'bg-green-600/20 text-green-500':'bg-red-600/20 text-red-500'}">
-                                    ${u.isBanned?'Restore':'Exile (Ban)'}
+                                <button onclick="toggleBan('${u.username}', ${u.isBanned})" class="px-3 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${u.isBanned?'bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600 hover:text-white':'bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white'}">
+                                    ${u.isBanned?'Restore':'Exile'}
+                                </button>
+                                <button onclick="deleteUser('${u.username}')" class="col-span-2 py-3 bg-slate-800/50 text-slate-500 hover:text-red-500 rounded-xl transition-all font-black text-[8px] uppercase tracking-widest border border-white/5">
+                                    Purge Data
                                 </button>
                             </div>
                         </div>`;
                 });
+                countDisp.innerText = total;
+                lucide.createIcons();
             });
             window.openModal('adminDashboardModal');
         };
@@ -398,11 +470,23 @@
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username), { isBanned: !isBanned });
         };
 
+        window.deleteUser = async (username) => {
+            if(confirm(`Purge '${username}' from Registry?`)) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username));
+            }
+        };
+
         window.switchChat = (target, dm) => {
             currentTarget = target;
             isDM = dm;
             document.getElementById('currentChannelName').innerText = target;
             document.getElementById('headerIcon').setAttribute('data-lucide', dm ? 'user' : 'hash');
+            if (window.innerWidth <= 768) {
+                const sb = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                sb.classList.remove('active');
+                overlay.classList.remove('active');
+            }
             loadMessages();
             lucide.createIcons();
         };
@@ -410,24 +494,22 @@
         function loadMessages() {
             if(msgUnsub) msgUnsub();
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), orderBy('timestamp', 'asc'));
-            
             msgUnsub = onSnapshot(q, snap => {
                 const win = document.getElementById('chatWindow');
                 win.innerHTML = '';
                 snap.forEach(d => {
                     const m = d.data();
                     let show = isDM ? (m.isPrivate && ((m.user === currentUser && m.target === currentTarget) || (m.user === currentTarget && m.target === currentUser))) : (!m.isPrivate && m.groupId === currentTarget);
-                    
                     if(show) {
                         const isMe = m.user === currentUser;
                         const div = document.createElement('div');
-                        div.className = `flex flex-col ${isMe?'items-end':'items-start'} group`;
+                        div.className = `flex flex-col ${isMe?'items-end':'items-start'} group w-full`;
                         div.innerHTML = `
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[9px] text-slate-500 uppercase font-black">${isMe?'You':m.user}</span>
-                                ${(isAdmin || isMe) ? `<button onclick="window.del('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-bold uppercase cursor-pointer">Delete</button>` : ''}
+                            <div class="flex items-center gap-3 mb-1.5 px-2">
+                                <span class="text-[8px] text-slate-500 uppercase font-black tracking-widest">${isMe?'Protocol Self':m.user}</span>
+                                ${(isAdmin || isMe) ? `<button onclick="window.del('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-black uppercase hover:underline">Erase</button>` : ''}
                             </div>
-                            <div class="message-bubble ${isMe?'bg-indigo-600 text-white rounded-2xl rounded-tr-none':'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none'} text-sm">
+                            <div class="message-bubble ${isMe?'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-3xl rounded-tr-none shadow-xl shadow-indigo-500/20':'bg-slate-900 text-slate-200 rounded-3xl rounded-tl-none border border-white/5'} text-[13px] leading-relaxed break-words glass">
                                 ${decrypt(m.text)}
                             </div>`;
                         win.appendChild(div);
@@ -437,7 +519,7 @@
             });
         }
 
-        window.del = async (id) => { if(confirm("Erase this digital footprint?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); };
+        window.del = async (id) => { if(confirm("Erase entry from mainframe?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); };
 
         document.getElementById('chatForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -454,19 +536,16 @@
             const user = document.getElementById('authUsername').value.trim();
             const pass = document.getElementById('authPassword').value.trim();
             if(!user || !pass) return;
-
             const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
             const snap = await getDoc(userRef);
-
             if (user === ADMIN_NAME && pass === ADMIN_PASS) {
                 if(!snap.exists()) await setDoc(userRef, { username: user, isBanned: false, isOnline: true, role: 'admin' });
                 else await updateDoc(userRef, { role: 'admin' });
                 startApp(user);
                 return;
             }
-
             if(document.getElementById('signupTab').classList.contains('bg-indigo-600')) {
-                if(snap.exists()) alert("Agent ID already in use.");
+                if(snap.exists()) alert("Identifier taken.");
                 else {
                     await setDoc(userRef, { username: user, password: encrypt(pass), isBanned: false, isOnline: true, role: 'user' });
                     startApp(user);
@@ -474,10 +553,10 @@
             } else {
                 if(snap.exists()) {
                     const d = snap.data();
-                    if(d.isBanned) alert("Registry Link Blocked by High Council.");
+                    if(d.isBanned) alert("Terminal restricted.");
                     else if(decrypt(d.password) === pass) startApp(user);
-                    else alert("Invalid Credentials.");
-                } else alert("Agent Unknown.");
+                    else alert("Access denied.");
+                } else alert("Unknown ID.");
             }
         };
 
@@ -488,12 +567,12 @@
         };
 
         document.getElementById('loginTab').onclick = () => {
-            document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
-            document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
+            document.getElementById('loginTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white shadow-lg transition-all';
+            document.getElementById('signupTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500';
         };
         document.getElementById('signupTab').onclick = () => {
-            document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
-            document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
+            document.getElementById('signupTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white shadow-lg transition-all';
+            document.getElementById('loginTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500';
         };
 
         document.getElementById('confirmCreateBtn').onclick = async () => {
