@@ -316,7 +316,12 @@
                 list.innerHTML = `<button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)"><i data-lucide="globe" class="w-4 h-4"></i> Public Channel</button>`;
                 snap.forEach(d => {
                     const g = d.data();
-                    list.innerHTML += `<button class="channel-btn ${!isDM && currentTarget===g.name?'active':''}" onclick="window.switchChat('${g.name}', false)"><i data-lucide="hash" class="w-4 h-4"></i> ${g.name}</button>`;
+                    list.innerHTML += `<div class="flex items-center group/item">
+                        <button class="channel-btn flex-grow ${!isDM && currentTarget===g.name?'active':''}" onclick="window.switchChat('${g.name}', false)">
+                            <i data-lucide="hash" class="w-4 h-4"></i> ${g.name}
+                        </button>
+                        ${isAdmin ? `<button onclick="deleteGroup('${d.id}')" class="p-2 text-red-500 opacity-0 group-hover/item:opacity-100"><i data-lucide="trash-2" class="w-3 h-3"></i></button>` : ''}
+                    </div>`;
                 });
                 lucide.createIcons();
             });
@@ -326,11 +331,7 @@
                 list.innerHTML = `<h3 class="text-[9px] uppercase tracking-widest text-slate-500 mb-3 px-2 mt-6 font-black">Terminals</h3>`;
                 snap.forEach(d => {
                     const u = d.data();
-                    
                     if(u.username === currentUser || u.isBanned) return;
-                    
-                    // SECURITY RULE: Non-admins cannot see Admins. 
-                    // To chat with Admin, you MUST be an admin yourself.
                     if(u.role === 'admin' && !isAdmin) return; 
                     
                     const on = u.isOnline;
@@ -354,6 +355,13 @@
             });
         }
 
+        window.deleteGroup = async (id) => {
+            if(confirm("Destroy this mainframe node?")) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', id));
+                if(currentTarget === id) window.switchChat('Public', false);
+            }
+        };
+
         window.openAdminDashboard = () => {
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                 const list = document.getElementById('dashUserList');
@@ -371,8 +379,8 @@
                                 <button onclick="toggleAdminRole('${u.username}', '${u.role}')" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${u.role==='admin'?'bg-slate-700':'bg-indigo-600'}">
                                     ${u.role==='admin'?'Revoke Admin':'Make Admin'}
                                 </button>
-                                <button onclick="toggleBan('${u.username}', ${u.isBanned})" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-600/20 text-red-500 border border-red-500/20">
-                                    ${u.isBanned?'Unban':'Ban'}
+                                <button onclick="toggleBan('${u.username}', ${u.isBanned})" class="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${u.isBanned?'bg-green-600/20 text-green-500':'bg-red-600/20 text-red-500'}">
+                                    ${u.isBanned?'Restore':'Exile (Ban)'}
                                 </button>
                             </div>
                         </div>`;
@@ -417,7 +425,7 @@
                         div.innerHTML = `
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="text-[9px] text-slate-500 uppercase font-black">${isMe?'You':m.user}</span>
-                                ${(isAdmin || isMe) ? `<button onclick="window.del('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-bold uppercase">Delete</button>` : ''}
+                                ${(isAdmin || isMe) ? `<button onclick="window.del('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-bold uppercase cursor-pointer">Delete</button>` : ''}
                             </div>
                             <div class="message-bubble ${isMe?'bg-indigo-600 text-white rounded-2xl rounded-tr-none':'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none'} text-sm">
                                 ${decrypt(m.text)}
@@ -429,7 +437,7 @@
             });
         }
 
-        window.del = async (id) => { if(confirm("Erase record?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); };
+        window.del = async (id) => { if(confirm("Erase this digital footprint?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); };
 
         document.getElementById('chatForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -466,7 +474,7 @@
             } else {
                 if(snap.exists()) {
                     const d = snap.data();
-                    if(d.isBanned) alert("Registry Link Blocked.");
+                    if(d.isBanned) alert("Registry Link Blocked by High Council.");
                     else if(decrypt(d.password) === pass) startApp(user);
                     else alert("Invalid Credentials.");
                 } else alert("Agent Unknown.");
