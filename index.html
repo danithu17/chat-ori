@@ -101,13 +101,13 @@
 </head>
 <body class="flex">
 
-    <!-- Loading -->
+    <!-- Loading Screen -->
     <div id="initLoader">
         <div class="w-10 h-10 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
-        <p class="mt-4 text-indigo-400 text-[9px] tracking-[0.4em] uppercase font-black">Establishing Secure Link...</p>
+        <p class="mt-4 text-indigo-400 text-[9px] tracking-[0.4em] uppercase font-black">Connecting to Ghost Network...</p>
     </div>
 
-    <!-- Login -->
+    <!-- Auth Overlay -->
     <div id="loginOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/98 px-4">
         <div class="w-full max-w-sm glass-panel p-8 rounded-[2rem] shadow-2xl">
             <div class="flex flex-col items-center mb-8">
@@ -115,29 +115,29 @@
                     <i data-lucide="shield-check" class="text-white w-7 h-7"></i>
                 </div>
                 <h2 class="text-xl font-black text-white uppercase tracking-tighter">Ghost Vault</h2>
-                <p class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Identity Management</p>
+                <p class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Registry Access</p>
             </div>
             
             <div class="flex mb-6 bg-black/40 rounded-xl p-1">
-                <button id="loginTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white transition-all">Connect</button>
-                <button id="signupTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500">Initialize</button>
+                <button id="loginTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white transition-all">Login</button>
+                <button id="signupTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500">Sign Up</button>
             </div>
 
             <div class="space-y-4">
                 <div class="space-y-1">
-                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Handle</label>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Username</label>
                     <input type="text" id="authUsername" class="w-full bg-black/30 border border-white/5 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm">
                 </div>
                 <div class="space-y-1">
                     <label class="text-[9px] font-bold text-slate-500 uppercase ml-2">Access Key</label>
                     <input type="password" id="authPassword" class="w-full bg-black/30 border border-white/5 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm">
                 </div>
-                <button id="authBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all mt-4">Establish Connection</button>
+                <button id="authBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all mt-4">Establish Link</button>
             </div>
         </div>
     </div>
 
-    <!-- Main UI -->
+    <!-- App Shell -->
     <div id="appUI" class="hidden flex w-full h-screen">
         <!-- Sidebar -->
         <aside class="w-64 bg-slate-950/80 border-r border-white/5 flex flex-col">
@@ -158,11 +158,11 @@
 
             <div class="p-4 border-t border-white/5 bg-slate-900/50">
                 <div class="flex items-center gap-3">
-                    <div id="userAvatar" class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-bold uppercase shadow-lg shadow-indigo-600/20">?</div>
+                    <div id="userAvatar" class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-bold uppercase">?</div>
                     <div class="flex-grow min-w-0">
-                        <p id="headerName" class="text-xs font-bold truncate flex items-center gap-1"></p>
+                        <p id="headerName" class="text-xs font-bold truncate"></p>
                         <p class="text-[8px] text-emerald-500 font-bold uppercase flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Active Now
                         </p>
                     </div>
                     <button id="logoutBtn" class="text-slate-500 hover:text-red-400 p-2"><i data-lucide="power" class="w-4 h-4"></i></button>
@@ -170,16 +170,16 @@
             </div>
         </aside>
 
-        <!-- Chat Area -->
+        <!-- Main Content -->
         <main class="flex-grow flex flex-col bg-slate-950">
-            <header class="h-16 border-b border-white/5 px-6 flex items-center justify-between bg-slate-950/50 backdrop-blur-md">
+            <header class="h-16 border-b border-white/5 px-6 flex items-center justify-between bg-slate-950/50">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center border border-white/5">
                         <i data-lucide="hash" id="headerIcon" class="w-4 h-4 text-indigo-400"></i>
                     </div>
                     <div>
                         <h3 id="currentChannelName" class="font-bold text-sm">Public</h3>
-                        <p id="targetStatus" class="text-[9px] uppercase font-bold text-slate-500"></p>
+                        <p id="targetStatus" class="text-[9px] uppercase font-bold text-slate-500">Connecting...</p>
                     </div>
                 </div>
             </header>
@@ -187,63 +187,41 @@
             <div id="chatWindow" class="chat-container flex-grow overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar"></div>
             
             <footer class="p-4 bg-slate-950/50">
-                <form id="chatForm" class="flex gap-2 bg-slate-900/80 border border-white/5 p-1 px-4 rounded-2xl focus-within:border-indigo-500/50 transition-all">
-                    <input type="text" id="messageInput" autocomplete="off" placeholder="Type an encrypted message..." class="flex-grow bg-transparent outline-none text-sm py-3.5">
-                    <button type="submit" class="text-indigo-500 hover:text-indigo-400 p-2 transition-transform active:scale-90"><i data-lucide="send" class="w-5 h-5"></i></button>
+                <form id="chatForm" class="flex gap-2 bg-slate-900/80 border border-white/5 p-1 px-4 rounded-2xl">
+                    <input type="text" id="messageInput" autocomplete="off" placeholder="Message..." class="flex-grow bg-transparent outline-none text-sm py-3.5">
+                    <button type="submit" class="text-indigo-500 p-2"><i data-lucide="send" class="w-5 h-5"></i></button>
                 </form>
             </footer>
         </main>
     </div>
 
-    <!-- Modals -->
+    <!-- Modal Node -->
     <div id="createNodeModal" class="modal-overlay">
         <div class="bg-slate-900 p-8 rounded-3xl w-80 border border-white/10 shadow-2xl">
             <h3 class="text-white font-bold mb-4 uppercase text-[10px] tracking-widest text-center">New Protocol Node</h3>
-            <input type="text" id="newGroupNameInput" placeholder="Node Handle" class="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm mb-4 outline-none focus:border-indigo-500">
+            <input type="text" id="newGroupNameInput" placeholder="Node Name" class="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm mb-4 outline-none focus:border-indigo-500">
             <div class="flex gap-2">
                 <button onclick="closeModal('createNodeModal')" class="flex-1 py-3 text-[10px] uppercase font-bold text-slate-500">Abort</button>
-                <button id="confirmCreateBtn" class="flex-1 bg-indigo-600 py-3 rounded-xl text-[10px] uppercase font-bold hover:bg-indigo-500">Deploy</button>
+                <button id="confirmCreateBtn" class="flex-1 bg-indigo-600 py-3 rounded-xl text-[10px] uppercase font-bold">Deploy</button>
             </div>
         </div>
     </div>
 
+    <!-- Admin Console -->
     <div id="adminDashboardModal" class="modal-overlay">
-        <div class="bg-slate-900 border border-white/10 rounded-[2.5rem] w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+        <div class="bg-slate-900 border border-white/10 rounded-[2.5rem] w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col">
             <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/20">
-                <div>
-                    <h2 class="text-xl font-black uppercase tracking-tighter text-white">Ghost Registry</h2>
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">System Overlord Controls</p>
-                </div>
-                <button onclick="closeModal('adminDashboardModal')" class="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <h2 class="text-xl font-black uppercase tracking-tighter text-white">Ghost Registry</h2>
+                <button onclick="closeModal('adminDashboardModal')" class="p-2 text-slate-400"><i data-lucide="x" class="w-6 h-6"></i></button>
             </div>
-            <div class="flex-grow overflow-hidden flex flex-col p-8 bg-slate-950/30">
-                <div class="grid grid-cols-3 gap-6 mb-8">
-                    <div class="glass-panel p-6 rounded-3xl border-indigo-500/10">
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">Authenticated Agents</p>
-                        <p id="statUsers" class="text-3xl font-black text-white">0</p>
-                    </div>
-                    <div class="glass-panel p-6 rounded-3xl border-emerald-500/10">
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">Encrypted Logs</p>
-                        <p id="statMsgs" class="text-3xl font-black text-white">0</p>
-                    </div>
-                    <div class="glass-panel p-6 rounded-3xl border-amber-500/10">
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">Secure Nodes</p>
-                        <p id="statNodes" class="text-3xl font-black text-white">0</p>
-                    </div>
+            <div class="flex-grow overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
+                <div>
+                    <h3 class="text-xs font-black uppercase text-indigo-400 mb-4">Active Agents</h3>
+                    <div id="dashUserList" class="space-y-3 custom-scrollbar overflow-y-auto h-[50vh]"></div>
                 </div>
-                <div class="flex-grow overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="flex flex-col">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
-                            <i data-lucide="users" class="w-4 h-4"></i> Active Agents
-                        </h3>
-                        <div id="dashUserList" class="flex-grow overflow-y-auto space-y-3 pr-2 custom-scrollbar"></div>
-                    </div>
-                    <div class="flex flex-col">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-amber-400 mb-4 flex items-center gap-2">
-                            <i data-lucide="cpu" class="w-4 h-4"></i> Protocol Mainframes
-                        </h3>
-                        <div id="dashNodeList" class="flex-grow overflow-y-auto space-y-3 pr-2 custom-scrollbar"></div>
-                    </div>
+                <div>
+                    <h3 class="text-xs font-black uppercase text-amber-400 mb-4">Node Controllers</h3>
+                    <div id="dashNodeList" class="space-y-3 custom-scrollbar overflow-y-auto h-[50vh]"></div>
                 </div>
             </div>
         </div>
@@ -263,91 +241,71 @@
             appId: "1:949955284458:web:9feca2b883fc5dd43c3693"
         };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ghost-vault-v12-final';
-        const CRYPTO_KEY = "SECRET_123";
-        const ADMIN_USERNAME = "Admin";
-        const ADMIN_PASSWORD = "123";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ghost-vault-final-v1';
+        const CRYPTO_KEY = "GHOST_SECURE_X";
+        const ADMIN_NAME = "Admin";
+        const ADMIN_PASS = "123";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let currentUser = null, currentTarget = 'Public', isDM = false, msgUnsub = null;
-        let isAdmin = false;
+        let currentUser = null, currentTarget = 'Public', isDM = false, msgUnsub = null, isAdmin = false;
 
         const encrypt = (t) => CryptoJS.AES.encrypt(t, CRYPTO_KEY).toString();
         const decrypt = (h) => {
-            try { return CryptoJS.AES.decrypt(h, CRYPTO_KEY).toString(CryptoJS.enc.Utf8) || "[Encrypted]"; }
-            catch { return "[Encrypted]"; }
+            try { return CryptoJS.AES.decrypt(h, CRYPTO_KEY).toString(CryptoJS.enc.Utf8) || "[SECURE]"; }
+            catch { return "[SECURE]"; }
         };
 
         window.openModal = (id) => document.getElementById(id).style.display = 'flex';
         window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 
-        const hideLoader = () => {
-            const loader = document.getElementById('initLoader');
-            if (loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 500);
-            }
-        };
-
-        const setOnlineStatus = async (status) => {
+        const updateStatus = async (status) => {
             if (currentUser) {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser), { 
-                    isOnline: status,
-                    lastSeen: serverTimestamp() 
-                }).catch(() => {});
+                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser);
+                await updateDoc(userRef, { isOnline: status, lastSeen: serverTimestamp() }).catch(() => {});
             }
         };
 
         // Handle offline on tab close
-        window.addEventListener('beforeunload', () => setOnlineStatus(false));
+        window.addEventListener('beforeunload', () => updateStatus(false));
 
-        const initializeAuth = () => {
+        const init = () => {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    const session = JSON.parse(localStorage.getItem('ghost_user'));
+                    const session = JSON.parse(localStorage.getItem('ghost_session'));
                     if (session) {
-                        const userDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', session.name));
-                        if (!userDoc.exists() || userDoc.data().isBanned) {
-                            handleLogout(userDoc.exists() ? "Session Suspended." : null);
-                        } else {
-                            await startApp(session.name);
-                        }
-                    } else {
-                        document.getElementById('loginOverlay').classList.remove('hidden');
-                        hideLoader();
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                }
+                        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', session.name));
+                        if (snap.exists() && !snap.data().isBanned) startApp(session.name);
+                        else showAuth();
+                    } else showAuth();
+                } else await signInAnonymously(auth);
             });
+        };
+
+        const showAuth = () => {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('initLoader').style.display = 'none';
         };
 
         async function startApp(name) {
             currentUser = name;
-            isAdmin = (name === ADMIN_USERNAME);
-            localStorage.setItem('ghost_user', JSON.stringify({ name }));
+            isAdmin = (name === ADMIN_NAME);
+            localStorage.setItem('ghost_session', JSON.stringify({ name }));
             
-            // Watch current user for remote logout/ban
-            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', name), (snap) => {
-                if (!snap.exists()) handleLogout();
-                else if (snap.data().isBanned) handleLogout("Account Blacklisted.");
-            });
-
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('appUI').classList.remove('hidden');
-            document.getElementById('headerName').innerHTML = name + (isAdmin ? '<span class="admin-badge ml-2">Admin</span>' : '');
+            document.getElementById('initLoader').style.display = 'none';
+            document.getElementById('headerName').innerHTML = name + (isAdmin ? ' <span class="admin-badge">Admin</span>' : '');
             document.getElementById('userAvatar').innerText = name[0];
             
             if(isAdmin) {
                 document.getElementById('adminOnlyPlus').classList.remove('hidden');
                 document.getElementById('adminDashTrigger').classList.remove('hidden');
             }
-            hideLoader();
 
-            await setOnlineStatus(true);
+            await updateStatus(true);
             loadSidebar();
             loadMessages();
             lucide.createIcons();
@@ -365,37 +323,32 @@
                 lucide.createIcons();
             });
 
-            // Users with Online Tracking
+            // Users with Real-time Status
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                 const list = document.getElementById('userList');
-                list.innerHTML = `<h3 class="text-[9px] uppercase tracking-widest text-slate-500 mb-3 px-2 mt-6 font-black">Secure Terminals</h3>`;
+                list.innerHTML = `<h3 class="text-[9px] uppercase tracking-widest text-slate-500 mb-3 px-2 mt-6 font-black">Terminals</h3>`;
                 snap.forEach(d => {
                     const u = d.data();
                     if(u.username === currentUser || u.isBanned) return;
                     
-                    const isOnline = u.isOnline;
+                    const on = u.isOnline;
                     list.innerHTML += `
                         <button class="channel-btn ${isDM && currentTarget===u.username?'active':''}" onclick="window.switchChat('${u.username}', true)">
-                            <div class="status-dot ${isOnline?'status-online':'status-offline'}"></div> 
+                            <div class="status-dot ${on?'status-online':'status-offline'}"></div> 
                             <div class="flex flex-col">
                                 <span class="font-bold">${u.username}</span>
-                                <span class="text-[7px] uppercase font-black tracking-tighter ${isOnline?'text-emerald-500':'text-slate-600'}">
-                                    ${isOnline?'Online':'Offline'}
-                                </span>
+                                <span class="text-[7px] uppercase ${on?'text-emerald-500':'text-slate-600'}">${on?'Online':'Offline'}</span>
                             </div>
                         </button>`;
                 });
                 
-                // Update header status if talking to someone
+                // Update header
                 if (isDM) {
-                    const targetUser = snap.docs.find(d => d.id === currentTarget)?.data();
-                    if (targetUser) {
-                        document.getElementById('targetStatus').innerText = targetUser.isOnline ? "Active Link" : "Terminal Offline";
-                        document.getElementById('targetStatus').className = `text-[9px] uppercase font-bold ${targetUser.isOnline ? 'text-emerald-500' : 'text-slate-500'}`;
-                    }
+                    const t = snap.docs.find(d => d.id === currentTarget)?.data();
+                    document.getElementById('targetStatus').innerText = t?.isOnline ? "Active Link" : "Offline";
+                    document.getElementById('targetStatus').className = `text-[9px] uppercase font-bold ${t?.isOnline ? 'text-emerald-500' : 'text-slate-500'}`;
                 } else {
-                    document.getElementById('targetStatus').innerText = "Mainframe Active";
-                    document.getElementById('targetStatus').className = "text-[9px] uppercase font-bold text-indigo-400";
+                    document.getElementById('targetStatus').innerText = "Encrypted Mainframe";
                 }
             });
         }
@@ -422,157 +375,85 @@
                     
                     if(show) {
                         const isMe = m.user === currentUser;
-                        const messageDiv = document.createElement('div');
-                        messageDiv.className = `flex flex-col ${isMe?'items-end':'items-start'} group`;
-                        
-                        // Delete logic: Admin can delete anything, Users can delete their OWN messages
-                        const canDelete = isAdmin || isMe;
-                        const delBtn = canDelete ? `<button onclick="window.deleteMsg('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-black uppercase mx-2 transition-all hover:scale-110">Delete</button>` : '';
-                        
-                        messageDiv.innerHTML = `
-                            <div class="flex items-center">
-                                ${isMe ? delBtn : ''}
-                                <span class="text-[9px] text-slate-500 mb-1 px-2 uppercase font-black tracking-tighter">${isMe?'You':m.user}</span>
-                                ${!isMe ? delBtn : ''}
+                        const div = document.createElement('div');
+                        div.className = `flex flex-col ${isMe?'items-end':'items-start'} group`;
+                        div.innerHTML = `
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[9px] text-slate-500 uppercase font-black">${isMe?'You':m.user}</span>
+                                ${(isAdmin || isMe) ? `<button onclick="window.del('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-bold uppercase">Delete</button>` : ''}
                             </div>
-                            <div class="message-bubble ${isMe?'bg-indigo-600 text-white rounded-2xl rounded-tr-none shadow-lg shadow-indigo-600/10':'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none'} text-sm border border-white/5">
+                            <div class="message-bubble ${isMe?'bg-indigo-600 text-white rounded-2xl rounded-tr-none':'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none'} text-sm">
                                 ${decrypt(m.text)}
                             </div>`;
-                        win.appendChild(messageDiv);
+                        win.appendChild(div);
                     }
                 });
                 win.scrollTop = win.scrollHeight;
             });
         }
 
-        window.deleteMsg = async (id) => { 
-            if(confirm("Confirm deletion of this record?")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); 
-            }
-        };
-
-        // Admin Dash
-        window.openAdminDashboard = () => {
-            openModal('adminDashboardModal');
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
-                document.getElementById('statUsers').innerText = snap.size;
-                const list = document.getElementById('dashUserList');
-                list.innerHTML = '';
-                snap.forEach(d => {
-                    const u = d.data();
-                    if(u.username === ADMIN_USERNAME) return;
-                    list.innerHTML += `
-                        <div class="flex justify-between items-center bg-black/40 p-4 rounded-2xl border border-white/5 hover:border-indigo-500/20 transition-all">
-                            <div class="flex items-center gap-3">
-                                <div class="w-2 h-2 rounded-full ${u.isOnline?'bg-emerald-500 shadow-glow shadow-emerald-500/50':'bg-slate-700'}"></div>
-                                <div>
-                                    <p class="text-sm font-bold text-white">${u.username} ${u.isBanned ? '<span class="text-red-500 ml-2 text-[8px] font-black uppercase">Blocked</span>' : ''}</p>
-                                    <p class="text-[8px] text-slate-500 font-bold uppercase">${u.isOnline?'Online Now':'Last Active Link Available'}</p>
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="window.adminBan('${u.username}', ${!u.isBanned})" class="p-2.5 ${u.isBanned?'text-emerald-500 bg-emerald-500/10':'text-red-500 bg-red-500/10'} rounded-xl transition-transform active:scale-90"><i data-lucide="${u.isBanned?'unlock-2':'lock'}" class="w-4 h-4"></i></button>
-                                <button onclick="window.adminRemove('${u.username}')" class="p-2.5 text-slate-400 bg-white/5 rounded-xl hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                            </div>
-                        </div>`;
-                });
-                lucide.createIcons();
-            });
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), snap => document.getElementById('statMsgs').innerText = snap.size);
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
-                document.getElementById('statNodes').innerText = snap.size;
-                const list = document.getElementById('dashNodeList');
-                list.innerHTML = '';
-                snap.forEach(d => {
-                    list.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-4 rounded-2xl border border-white/5"><p class="text-sm font-bold text-white"># ${d.data().name}</p><button onclick="window.adminDeleteNode('${d.id}')" class="text-red-500/50 hover:text-red-500 transition-colors"><i data-lucide="x-circle" class="w-4 h-4"></i></button></div>`;
-                });
-                lucide.createIcons();
-            });
-        };
-
-        window.adminBan = async (u, s) => { if(confirm(`${s?'Suspend':'Restore'} ${u}'s access?`)) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u), { isBanned: s }); };
-        window.adminRemove = async (u) => { if(confirm(`Purge ${u} from the registry permanently?`)) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u)); };
-        window.adminDeleteNode = async (id) => { if(confirm("Terminate protocol node?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', id)); };
-
-        const handleLogout = async (msg) => {
-            if(msg) alert(msg);
-            await setOnlineStatus(false);
-            localStorage.removeItem('ghost_user');
-            location.reload();
-        };
-
-        document.getElementById('logoutBtn').onclick = () => handleLogout();
+        window.del = async (id) => { if(confirm("Erase record?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); };
 
         document.getElementById('chatForm').onsubmit = async (e) => {
             e.preventDefault();
             const input = document.getElementById('messageInput');
             const val = input.value.trim();
-            if(!val || !currentUser) return;
-            const msg = { 
-                user: currentUser, 
-                text: encrypt(val), 
-                timestamp: serverTimestamp(), 
-                isPrivate: isDM 
-            };
-            if(isDM) msg.target = currentTarget; else msg.groupId = currentTarget;
+            if(!val) return;
+            const data = { user: currentUser, text: encrypt(val), timestamp: serverTimestamp(), isPrivate: isDM };
+            if(isDM) data.target = currentTarget; else data.groupId = currentTarget;
             input.value = '';
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), msg);
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), data);
         };
 
+        // Authentication Logic
         document.getElementById('authBtn').onclick = async () => {
             const user = document.getElementById('authUsername').value.trim();
             const pass = document.getElementById('authPassword').value.trim();
             if(!user || !pass) return;
 
-            if (user === ADMIN_USERNAME && pass === ADMIN_PASSWORD) {
-                const admRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
-                const admSnap = await getDoc(admRef);
-                if (!admSnap.exists()) {
-                    await setDoc(admRef, { username: user, role: 'admin', isBanned: false, isOnline: true });
-                }
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
+            const snap = await getDoc(userRef);
+
+            // Admin Logic
+            if (user === ADMIN_NAME && pass === ADMIN_PASS) {
+                if(!snap.exists()) await setDoc(userRef, { username: user, isBanned: false, isOnline: true, role: 'admin' });
                 startApp(user);
                 return;
             }
 
-            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
-            const snap = await getDoc(userRef);
-            
             if(document.getElementById('signupTab').classList.contains('bg-indigo-600')) {
-                if(snap.exists()) alert("Agent ID conflict detected.");
-                else { 
-                    await setDoc(userRef, { username: user, password: encrypt(pass), role: 'user', isBanned: false, isOnline: true }); 
-                    startApp(user); 
+                if(snap.exists()) alert("Agent ID already in use.");
+                else {
+                    await setDoc(userRef, { username: user, password: encrypt(pass), isBanned: false, isOnline: true, role: 'user' });
+                    startApp(user);
                 }
             } else {
                 if(snap.exists()) {
                     const d = snap.data();
                     if(d.isBanned) alert("Registry Link Blocked.");
-                    else if(decrypt(d.password) === pass) startApp(user);
-                    else alert("Access Key Incorrect.");
-                } else alert("Agent Identity Not Found.");
+                    else if(decrypt(d.password) === pass || (user === ADMIN_NAME && pass === ADMIN_PASS)) startApp(user);
+                    else alert("Invalid Credentials.");
+                } else alert("Agent Unknown.");
             }
         };
 
-        document.getElementById('confirmCreateBtn').onclick = async () => {
-            const name = document.getElementById('newGroupNameInput').value.trim();
-            if(!name) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), { name });
-            closeModal('createNodeModal');
+        document.getElementById('logoutBtn').onclick = async () => {
+            await updateStatus(false);
+            localStorage.removeItem('ghost_session');
+            location.reload();
         };
 
+        // UI Tabs
         document.getElementById('loginTab').onclick = () => {
             document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
             document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
-            document.getElementById('authBtn').innerText = "Establish Connection";
         };
         document.getElementById('signupTab').onclick = () => {
             document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
             document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
-            document.getElementById('authBtn').innerText = "Initialize Agent";
         };
 
-        initializeAuth();
+        init();
     </script>
 </body>
 </html>
-
