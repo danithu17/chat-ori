@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecretChat - Ghost Vault Elite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --bg-dark: #020617;
+            --sidebar-bg: #0f172a;
+            --glass: rgba(15, 23, 42, 0.6);
+            --accent: #6366f1;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg-dark);
+            color: #f8fafc; 
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-container { height: calc(100vh - 160px); }
+
+        .message-bubble { 
+            max-width: 75%; 
+            padding: 12px 16px;
+            animation: fadeInUp 0.3s ease-out;
+            position: relative;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .channel-btn {
+            width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px;
+            font-size: 13px; color: #94a3b8; transition: all 0.2s;
+            margin-bottom: 4px; display: flex; align-items: center; gap: 10px;
+        }
+        
+        .channel-btn:hover { background: rgba(255, 255, 255, 0.05); color: #f8fafc; }
+        
+        .channel-btn.active { 
+            background: rgba(99, 102, 241, 0.15); 
+            color: #818cf8; 
+            border-left: 3px solid #6366f1; 
+        }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-online { background: #10b981; }
+
+        #customModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(2, 6, 23, 0.8);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #initLoader {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: #020617;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .admin-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Loading Screen -->
+    <div id="initLoader">
+        <div class="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+        <p class="mt-4 text-indigo-400 text-[10px] tracking-[0.3em] uppercase font-black">Initializing Vault...</p>
+    </div>
+
+    <!-- Auth Overlay -->
+    <div id="loginOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm px-4">
+        <div class="w-full max-w-sm glass-panel p-8 rounded-[2rem] shadow-2xl">
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center mb-4">
+                    <i data-lucide="ghost" class="text-white w-7 h-7"></i>
+                </div>
+                <h2 class="text-xl font-black text-white uppercase tracking-tighter">Ghost Vault</h2>
+                <p class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">Access Protocol Required</p>
+            </div>
+            
+            <div class="flex mb-6 bg-black/40 rounded-xl p-1">
+                <button id="loginTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white transition-all">Login</button>
+                <button id="signupTab" class="flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500">Register</button>
+            </div>
+
+            <div class="space-y-4">
+                <input type="text" id="authUsername" placeholder="Username" class="w-full bg-black/30 border border-white/5 rounded-xl px-4 py-3 outline-none focus:border-indigo-500/50 text-sm">
+                <input type="password" id="authPassword" placeholder="Password" class="w-full bg-black/30 border border-white/5 rounded-xl px-4 py-3 outline-none focus:border-indigo-500/50 text-sm">
+                <button id="authBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all">Authenticate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP UI -->
+    <div id="appUI" class="hidden flex w-full h-screen">
+        <aside class="w-64 bg-slate-900/50 border-r border-white/5 flex flex-col">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                <h2 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Vault Nodes</h2>
+                <button id="adminOnlyPlus" onclick="document.getElementById('customModal').style.display='flex'" class="text-slate-400 hover:text-white hidden"><i data-lucide="plus" class="w-4 h-4"></i></button>
+            </div>
+            <div class="flex-grow overflow-y-auto p-4">
+                <div id="groupList" class="mb-6"></div>
+                <div id="userList"></div>
+            </div>
+            <div class="p-4 border-t border-white/5 bg-slate-950/50">
+                <div class="flex items-center gap-3">
+                    <div id="userAvatar" class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-bold">?</div>
+                    <div class="flex-grow min-w-0">
+                        <p id="headerName" class="text-xs font-bold truncate flex items-center">...</p>
+                        <p class="text-[8px] text-emerald-500 font-bold uppercase">Online</p>
+                    </div>
+                    <button id="logoutBtn" class="text-slate-500 hover:text-red-400"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-grow flex flex-col bg-slate-950">
+            <header class="h-14 border-b border-white/5 px-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="hash" id="headerIcon" class="w-4 h-4 text-indigo-400"></i>
+                    <h3 id="currentChannelName" class="font-bold text-sm">Public</h3>
+                </div>
+            </header>
+            <div id="chatWindow" class="chat-container flex-grow overflow-y-auto p-6 flex flex-col gap-4"></div>
+            <footer class="p-4 bg-slate-950">
+                <form id="chatForm" class="flex gap-2 bg-slate-900 border border-white/5 p-1 px-4 rounded-xl">
+                    <input type="text" id="messageInput" autocomplete="off" placeholder="Message..." class="flex-grow bg-transparent outline-none text-sm py-3">
+                    <button type="submit" class="text-indigo-500 hover:text-indigo-400 p-2"><i data-lucide="send" class="w-5 h-5"></i></button>
+                </form>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="customModal">
+        <div class="bg-slate-900 p-8 rounded-2xl w-80 border border-white/10">
+            <h3 class="text-white font-bold mb-4 uppercase text-xs tracking-widest">New Node (Admin Only)</h3>
+            <input type="text" id="newGroupNameInput" placeholder="Name..." class="w-full bg-black/40 border border-white/5 rounded-lg px-4 py-2 text-sm mb-4 outline-none">
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('customModal').style.display='none'" class="flex-1 py-2 text-[10px] uppercase font-bold text-slate-500">Cancel</button>
+                <button id="confirmCreateBtn" class="flex-1 bg-indigo-600 py-2 rounded-lg text-[10px] uppercase font-bold">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBQ4kbOR1uvonh3QQyPtglAKf02jnxNxTo",
+            authDomain: "chat123-8b002.firebaseapp.com",
+            projectId: "chat123-8b002",
+            storageBucket: "chat123-8b002.firebasestorage.app",
+            messagingSenderId: "949955284458",
+            appId: "1:949955284458:web:9feca2b883fc5dd43c3693"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ghost-vault-v5';
+        const CRYPTO_KEY = "SECRET_123";
+        
+        // --- Admin Credentials ---
+        const ADMIN_USERNAME = "Admin";
+        const ADMIN_PASSWORD = "123"; // Apita meka pass karala balanna puluwan
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser, currentTarget = 'Public', isDM = false, msgUnsub = null;
+        let isAdmin = false;
+
+        const encrypt = (t) => CryptoJS.AES.encrypt(t, CRYPTO_KEY).toString();
+        const decrypt = (h) => {
+            try { return CryptoJS.AES.decrypt(h, CRYPTO_KEY).toString(CryptoJS.enc.Utf8) || "[Encrypted]"; }
+            catch { return "[Encrypted]"; }
+        };
+
+        const hideLoader = () => {
+            const loader = document.getElementById('initLoader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        };
+
+        const initializeAuth = async () => {
+            try {
+                const session = JSON.parse(localStorage.getItem('ghost_user'));
+                
+                const authTimeout = setTimeout(() => {
+                    if (!currentUser) {
+                        document.getElementById('loginOverlay').classList.remove('hidden');
+                        hideLoader();
+                    }
+                }, 3000);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        clearTimeout(authTimeout);
+                        if (session) await startApp(session.name);
+                        else {
+                            document.getElementById('loginOverlay').classList.remove('hidden');
+                            hideLoader();
+                        }
+                    } else {
+                        try {
+                            await signInAnonymously(auth);
+                        } catch (e) {
+                            console.error("Auth failed:", e);
+                            document.getElementById('loginOverlay').classList.remove('hidden');
+                            hideLoader();
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Init error:", err);
+                hideLoader();
+                document.getElementById('loginOverlay').classList.remove('hidden');
+            }
+        };
+
+        async function startApp(name) {
+            currentUser = name;
+            isAdmin = (name === ADMIN_USERNAME);
+            localStorage.setItem('ghost_user', JSON.stringify({ name }));
+            
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('appUI').classList.remove('hidden');
+            
+            const headerNameEl = document.getElementById('headerName');
+            headerNameEl.innerHTML = name + (isAdmin ? '<span class="admin-badge">Admin</span>' : '');
+            
+            document.getElementById('userAvatar').innerText = name[0].toUpperCase();
+            
+            // Admin only features visibility
+            if(isAdmin) {
+                document.getElementById('adminOnlyPlus').classList.remove('hidden');
+            }
+
+            hideLoader();
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', name), { 
+                username: name, 
+                isOnline: true,
+                role: isAdmin ? 'admin' : 'user',
+                lastSeen: serverTimestamp()
+            }, { merge: true });
+
+            loadSidebar();
+            loadMessages();
+            lucide.createIcons();
+        }
+
+        function loadSidebar() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
+                const list = document.getElementById('groupList');
+                list.innerHTML = `<button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)"># Public</button>`;
+                snap.forEach(d => {
+                    const g = d.data();
+                    list.innerHTML += `<button class="channel-btn ${!isDM && currentTarget===g.name?'active':''}" onclick="window.switchChat('${g.name}', false)"># ${g.name}</button>`;
+                });
+            }, (err) => console.error("Sidebar groups error:", err));
+
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
+                const list = document.getElementById('userList');
+                list.innerHTML = `<h3 class="text-[9px] uppercase tracking-widest text-slate-500 mb-2 px-2">Users</h3>`;
+                snap.forEach(d => {
+                    const u = d.data();
+                    if(u.username === currentUser) return;
+                    list.innerHTML += `<button class="channel-btn ${isDM && currentTarget===u.username?'active':''}" onclick="window.switchChat('${u.username}', true)">
+                        <div class="status-dot status-online"></div> ${u.username} ${u.role === 'admin' ? '<span class="admin-badge">Admin</span>' : ''}
+                    </button>`;
+                });
+            }, (err) => console.error("Sidebar users error:", err));
+        }
+
+        window.switchChat = (target, dm) => {
+            currentTarget = target;
+            isDM = dm;
+            document.getElementById('currentChannelName').innerText = target;
+            document.getElementById('headerIcon').setAttribute('data-lucide', dm ? 'user' : 'hash');
+            loadMessages();
+            lucide.createIcons();
+        };
+
+        function loadMessages() {
+            if(msgUnsub) msgUnsub();
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), orderBy('timestamp', 'asc'));
+            
+            msgUnsub = onSnapshot(q, snap => {
+                const win = document.getElementById('chatWindow');
+                win.innerHTML = '';
+                snap.forEach(d => {
+                    const m = d.data();
+                    const msgId = d.id;
+                    let show = isDM ? 
+                        ((m.user === currentUser && m.target === currentTarget) || (m.user === currentTarget && m.target === currentUser)) : 
+                        (m.groupId === currentTarget);
+                    
+                    if(show) {
+                        const isMe = m.user === currentUser;
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `flex flex-col ${isMe?'items-end':'items-start'} group`;
+                        
+                        // Admin delete button
+                        const deleteBtn = (isAdmin || isMe) ? `<button onclick="window.deleteMsg('${msgId}')" class="opacity-0 group-hover:opacity-100 transition-opacity text-[8px] text-red-500 font-bold uppercase mr-2 ml-2">Delete</button>` : '';
+
+                        messageDiv.innerHTML = `
+                            <div class="flex items-center">
+                                ${isMe ? deleteBtn : ''}
+                                <span class="text-[9px] text-slate-500 mb-1 px-2 uppercase">${isMe?'You':m.user}</span>
+                                ${!isMe ? deleteBtn : ''}
+                            </div>
+                            <div class="message-bubble ${isMe?'bg-indigo-600 text-white rounded-2xl rounded-tr-none':'bg-slate-800 text-slate-300 rounded-2xl rounded-tl-none'} text-sm">
+                                ${decrypt(m.text)}
+                            </div>`;
+                        win.appendChild(messageDiv);
+                    }
+                });
+                win.scrollTop = win.scrollHeight;
+            }, (err) => console.error("Messages error:", err));
+        }
+
+        window.deleteMsg = async (id) => {
+            if(!confirm("Meka delete karannada?")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id));
+            } catch (err) {
+                console.error("Delete error:", err);
+            }
+        };
+
+        document.getElementById('chatForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('messageInput');
+            const val = input.value.trim();
+            if(!val || !currentUser) return;
+            
+            const msg = { user: currentUser, text: encrypt(val), timestamp: serverTimestamp() };
+            if(isDM) msg.target = currentTarget; else msg.groupId = currentTarget;
+            
+            input.value = '';
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), msg);
+            } catch (err) {
+                console.error("Send error:", err);
+            }
+        };
+
+        document.getElementById('authBtn').onclick = async () => {
+            const user = document.getElementById('authUsername').value.trim();
+            const pass = document.getElementById('authPassword').value.trim();
+            if(!user || !pass) return;
+
+            const isSignup = document.getElementById('signupTab').classList.contains('bg-indigo-600');
+            
+            // --- Hardcoded Admin Check ---
+            if (user === ADMIN_USERNAME && pass === ADMIN_PASSWORD) {
+                startApp(user);
+                return;
+            } else if (user === ADMIN_USERNAME && pass !== ADMIN_PASSWORD) {
+                alert("Invalid Admin Password");
+                return;
+            }
+
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
+            try {
+                const snap = await getDoc(userRef);
+                if(isSignup) {
+                    if(snap.exists()) alert("User already exists");
+                    else {
+                        await setDoc(userRef, { username: user, password: encrypt(pass), role: 'user' });
+                        startApp(user);
+                    }
+                } else {
+                    if(snap.exists() && decrypt(snap.data().password) === pass) startApp(user);
+                    else alert("Wrong credentials");
+                }
+            } catch (err) {
+                console.error("Auth click error:", err);
+                alert("Database connection error.");
+            }
+        };
+
+        document.getElementById('confirmCreateBtn').onclick = async () => {
+            if(!isAdmin) { alert("Admin only!"); return; }
+            const name = document.getElementById('newGroupNameInput').value.trim();
+            if(!name) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), { name });
+            document.getElementById('customModal').style.display = 'none';
+        };
+
+        document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); location.reload(); };
+        document.getElementById('loginTab').onclick = () => {
+            document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
+            document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
+        };
+        document.getElementById('signupTab').onclick = () => {
+            document.getElementById('signupTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg bg-indigo-600 text-white';
+            document.getElementById('loginTab').className = 'flex-1 py-2 text-[10px] font-black uppercase rounded-lg text-slate-500';
+        };
+
+        initializeAuth();
+    </script>
+</body>
+</html>
