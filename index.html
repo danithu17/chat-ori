@@ -29,7 +29,6 @@
 
         h1, h2, h3, .font-space { font-family: 'Space Grotesk', sans-serif; }
 
-        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { 
@@ -165,7 +164,6 @@
     <div id="appUI" class="hidden flex w-full h-screen relative">
         <div id="sidebarOverlay" class="sidebar-overlay" onclick="window.toggleSidebar()"></div>
 
-        <!-- Sidebar -->
         <aside id="sidebar" class="bg-slate-950/40 border-r border-white/5 flex flex-col md:w-72 glass">
             <div class="p-8 border-b border-white/5 flex justify-between items-center bg-slate-950/20">
                 <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 font-space">Channels</h2>
@@ -201,7 +199,6 @@
             </div>
         </aside>
 
-        <!-- Main Workspace -->
         <main class="flex-grow flex flex-col bg-slate-950/20 w-full min-w-0">
             <header class="h-20 border-b border-white/5 px-6 md:px-10 flex items-center justify-between bg-slate-950/40 backdrop-blur-md shrink-0">
                 <div class="flex items-center gap-4">
@@ -214,11 +211,6 @@
                     <div class="min-w-0">
                         <h3 id="currentChannelName" class="font-black text-base truncate text-white font-space">Public</h3>
                         <p id="targetStatus" class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Syncing protocol...</p>
-                    </div>
-                </div>
-                <div class="hidden md:flex items-center gap-4">
-                    <div class="flex -space-x-2">
-                         <!-- Multi-user presence could go here -->
                     </div>
                 </div>
             </header>
@@ -272,9 +264,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
 
-        // Same config and logic from previous version, just enhancing the rendering/styles
         const firebaseConfig = {
             apiKey: "AIzaSyBQ4kbOR1uvonh3QQyPtglAKf02jnxNxTo",
             authDomain: "chat123-8b002.firebaseapp.com",
@@ -293,7 +284,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let currentUser = null, currentTarget = 'Public', isDM = false, msgUnsub = null, isAdmin = false;
+        let currentUser = null, currentTarget = 'Public', isDM = false, msgUnsub = null, accountUnsub = null, isAdmin = false;
 
         const encrypt = (t) => CryptoJS.AES.encrypt(t, CRYPTO_KEY).toString();
         const decrypt = (h) => {
@@ -301,195 +292,121 @@
             catch { return "[SECURE]"; }
         };
 
-        window.openModal = (id) => {
-            const el = document.getElementById(id);
-            el.style.display = 'flex';
-            el.classList.add('animate__animated', 'animate__fadeIn');
-        };
-        window.closeModal = (id) => {
-            const el = document.getElementById(id);
-            el.classList.remove('animate__fadeIn');
-            el.classList.add('animate__fadeOut');
-            setTimeout(() => {
-                el.style.display = 'none';
-                el.classList.remove('animate__fadeOut');
-            }, 300);
-        };
-
-        window.toggleSidebar = () => {
-            const sb = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sb.classList.toggle('active');
-            overlay.classList.toggle('active');
-        };
-
-        const updateStatus = async (status) => {
+        // --- AUTH LOGIC ---
+        
+        const logout = async () => {
+            if (accountUnsub) accountUnsub();
+            if (msgUnsub) msgUnsub();
             if (currentUser) {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser);
-                await updateDoc(userRef, { isOnline: status, lastSeen: serverTimestamp() }).catch(() => {});
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser), { isOnline: false }).catch(()=>{});
             }
+            localStorage.removeItem('ghost_session');
+            await signOut(auth);
+            location.reload();
         };
 
-        window.addEventListener('beforeunload', () => updateStatus(false));
+        document.getElementById('logoutBtn').onclick = logout;
 
-        const init = () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const session = JSON.parse(localStorage.getItem('ghost_session'));
-                    if (session) {
-                        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', session.name));
-                        if (snap.exists() && !snap.data().isBanned) startApp(session.name);
-                        else showAuth();
-                    } else showAuth();
-                } else await signInAnonymously(auth);
+        const monitorAccount = (username) => {
+            if (accountUnsub) accountUnsub();
+            accountUnsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', username), (snap) => {
+                if (!snap.exists()) {
+                    logout(); // Account deleted by admin
+                } else if (snap.data().isBanned) {
+                    logout(); // User banned
+                } else {
+                    isAdmin = snap.data().role === 'admin';
+                    document.getElementById('adminDashTrigger').style.display = isAdmin ? 'block' : 'none';
+                    document.getElementById('adminOnlyPlus').style.display = isAdmin ? 'block' : 'none';
+                }
             });
         };
 
-        const showAuth = () => {
-            document.getElementById('loginOverlay').classList.remove('hidden');
-            document.getElementById('initLoader').style.display = 'none';
-        };
-
-        async function startApp(name) {
+        const startApp = async (name) => {
             currentUser = name;
-            const userSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', name));
-            isAdmin = userSnap.exists() && userSnap.data().role === 'admin';
             localStorage.setItem('ghost_session', JSON.stringify({ name }));
+            
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('appUI').classList.remove('hidden');
             document.getElementById('initLoader').style.display = 'none';
-            document.getElementById('headerName').innerHTML = name + (isAdmin ? ' <span class="admin-badge ml-2">Admin</span>' : '');
-            document.getElementById('userAvatar').innerText = name[0];
-            if(isAdmin) {
-                document.getElementById('adminOnlyPlus').classList.remove('hidden');
-                document.getElementById('adminDashTrigger').classList.remove('hidden');
-            }
-            await updateStatus(true);
+            
+            document.getElementById('headerName').innerText = name;
+            document.getElementById('userAvatar').innerText = name[0].toUpperCase();
+            
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', name), { isOnline: true });
+            
+            monitorAccount(name);
             loadSidebar();
             loadMessages();
             lucide.createIcons();
-        }
+        };
+
+        // Initial Auth Check
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const session = JSON.parse(localStorage.getItem('ghost_session'));
+                if (session) {
+                    const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', session.name));
+                    if (snap.exists() && !snap.data().isBanned) {
+                        startApp(session.name);
+                    } else {
+                        document.getElementById('loginOverlay').classList.remove('hidden');
+                        document.getElementById('initLoader').style.display = 'none';
+                    }
+                } else {
+                    document.getElementById('loginOverlay').classList.remove('hidden');
+                    document.getElementById('initLoader').style.display = 'none';
+                }
+            } else {
+                await signInAnonymously(auth);
+            }
+        });
+
+        // --- SIDEBAR & CHAT LOGIC ---
 
         function loadSidebar() {
+            // Groups
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
                 const list = document.getElementById('groupList');
                 list.innerHTML = `<h3 class="text-[9px] uppercase tracking-[0.3em] text-slate-500 mb-3 px-4 font-black">Mainframes</h3>
-                    <button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)"><i data-lucide="globe" class="w-4 h-4"></i> Public Channel</button>`;
+                    <button class="channel-btn ${!isDM && currentTarget==='Public'?'active':''}" onclick="window.switchChat('Public', false)">
+                        <i data-lucide="globe" class="w-4 h-4"></i> Public Channel
+                    </button>`;
                 snap.forEach(d => {
                     const g = d.data();
                     list.innerHTML += `<div class="flex items-center group/item px-2">
                         <button class="channel-btn flex-grow ${!isDM && currentTarget===g.name?'active':''}" onclick="window.switchChat('${g.name}', false)">
                             <i data-lucide="hash" class="w-4 h-4"></i> ${g.name}
                         </button>
-                        ${isAdmin ? `<button onclick="deleteGroup('${d.id}')" class="p-2 text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500/10 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button>` : ''}
+                        ${isAdmin ? `<button onclick="window.deleteGroup('${d.id}')" class="p-2 text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3 h-3"></i></button>` : ''}
                     </div>`;
                 });
                 lucide.createIcons();
             });
 
+            // Users
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
                 const list = document.getElementById('userList');
                 list.innerHTML = `<h3 class="text-[9px] uppercase tracking-[0.3em] text-slate-500 mb-3 px-4 font-black">Terminals</h3>`;
                 snap.forEach(d => {
                     const u = d.data();
                     if(u.username === currentUser || u.isBanned) return;
-                    if(u.role === 'admin' && !isAdmin) return; 
                     const on = u.isOnline;
                     list.innerHTML += `
                         <button class="channel-btn ${isDM && currentTarget===u.username?'active':''}" onclick="window.switchChat('${u.username}', true)">
-                            <div class="relative">
+                            <div class="relative shrink-0">
                                 <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black border border-white/5 uppercase">${u.username[0]}</div>
-                                <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${on?'bg-emerald-500 shadow-[0_0_8px_#10b981]':'bg-slate-600'}"></div>
+                                <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${on?'bg-emerald-500':'bg-slate-600'}"></div>
                             </div>
-                            <div class="flex flex-col min-w-0">
-                                <span class="font-bold truncate text-white">${u.username} ${u.role==='admin'?'<span class="text-[7px] text-red-400 font-black tracking-widest ml-1">ADM</span>':''}</span>
-                                <span class="text-[7px] uppercase tracking-tighter ${on?'text-emerald-500':'text-slate-600'} font-black">${on?'Ready':'Idle'}</span>
+                            <div class="flex flex-col min-w-0 items-start">
+                                <span class="font-bold truncate text-white">${u.username}</span>
+                                <span class="text-[7px] uppercase ${on?'text-emerald-500':'text-slate-600'} font-black">${on?'Online':'Idle'}</span>
                             </div>
                         </button>`;
                 });
-                if (isDM) {
-                    const t = snap.docs.find(d => d.id === currentTarget)?.data();
-                    document.getElementById('targetStatus').innerText = t?.isOnline ? "Encrypted Line: Established" : "Signal Lost: Offline";
-                    document.getElementById('targetStatus').className = `text-[9px] uppercase font-black tracking-widest ${t?.isOnline ? 'text-emerald-500' : 'text-slate-600'}`;
-                } else {
-                    document.getElementById('targetStatus').innerText = "Mainframe Broadcast Active";
-                    document.getElementById('targetStatus').className = "text-[9px] uppercase font-black tracking-widest text-indigo-400";
-                }
-            });
-        }
-
-        window.openAdminDashboard = () => {
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
-                const list = document.getElementById('dashUserList');
-                const countDisp = document.getElementById('dashUserCount');
-                list.innerHTML = '';
-                let total = 0;
-                snap.forEach(d => {
-                    const u = d.data();
-                    total++;
-                    if(u.username === ADMIN_NAME) return;
-                    list.innerHTML += `
-                        <div class="bg-slate-900/80 p-6 rounded-3xl border border-white/5 hover:border-indigo-500/30 transition-all flex flex-col gap-5 glass">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-sm font-black text-indigo-400 shrink-0 border border-white/5">
-                                    ${u.username[0].toUpperCase()}
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-white font-black text-base truncate flex items-center gap-2">
-                                        ${u.username} 
-                                        ${u.isBanned ? '<span class="text-[7px] bg-red-500 text-white px-1.5 py-0.5 rounded font-black shrink-0">EXILED</span>' : ''}
-                                    </p>
-                                    <p class="text-[8px] uppercase font-black text-indigo-400/60 tracking-widest mt-0.5">${u.role} protocol</p>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 pt-4 border-t border-white/5">
-                                <button onclick="toggleAdminRole('${u.username}', '${u.role}')" class="px-3 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${u.role==='admin'?'bg-slate-700 text-slate-300':'bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white'}">
-                                    ${u.role==='admin'?'Demote':'Promote'}
-                                </button>
-                                <button onclick="toggleBan('${u.username}', ${u.isBanned})" class="px-3 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${u.isBanned?'bg-emerald-600/20 text-emerald-500 hover:bg-emerald-600 hover:text-white':'bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white'}">
-                                    ${u.isBanned?'Restore':'Exile'}
-                                </button>
-                                <button onclick="deleteUser('${u.username}')" class="col-span-2 py-3 bg-slate-800/50 text-slate-500 hover:text-red-500 rounded-xl transition-all font-black text-[8px] uppercase tracking-widest border border-white/5">
-                                    Purge Data
-                                </button>
-                            </div>
-                        </div>`;
-                });
-                countDisp.innerText = total;
                 lucide.createIcons();
             });
-            window.openModal('adminDashboardModal');
-        };
-
-        window.toggleAdminRole = async (username, currentRole) => {
-            const newRole = currentRole === 'admin' ? 'user' : 'admin';
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username), { role: newRole });
-        };
-
-        window.toggleBan = async (username, isBanned) => {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username), { isBanned: !isBanned });
-        };
-
-        window.deleteUser = async (username) => {
-            if(confirm(`Purge '${username}' from Registry?`)) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', username));
-            }
-        };
-
-        window.switchChat = (target, dm) => {
-            currentTarget = target;
-            isDM = dm;
-            document.getElementById('currentChannelName').innerText = target;
-            document.getElementById('headerIcon').setAttribute('data-lucide', dm ? 'user' : 'hash');
-            if (window.innerWidth <= 768) {
-                const sb = document.getElementById('sidebar');
-                const overlay = document.getElementById('sidebarOverlay');
-                sb.classList.remove('active');
-                overlay.classList.remove('active');
-            }
-            loadMessages();
-            lucide.createIcons();
-        };
+        }
 
         function loadMessages() {
             if(msgUnsub) msgUnsub();
@@ -503,13 +420,10 @@
                     if(show) {
                         const isMe = m.user === currentUser;
                         const div = document.createElement('div');
-                        div.className = `flex flex-col ${isMe?'items-end':'items-start'} group w-full`;
+                        div.className = `flex flex-col ${isMe?'items-end':'items-start'} group w-full mb-4`;
                         div.innerHTML = `
-                            <div class="flex items-center gap-3 mb-1.5 px-2">
-                                <span class="text-[8px] text-slate-500 uppercase font-black tracking-widest">${isMe?'Protocol Self':m.user}</span>
-                                ${(isAdmin || isMe) ? `<button onclick="window.del('${d.id}')" class="opacity-0 group-hover:opacity-100 text-[8px] text-red-500 font-black uppercase hover:underline">Erase</button>` : ''}
-                            </div>
-                            <div class="message-bubble ${isMe?'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-3xl rounded-tr-none shadow-xl shadow-indigo-500/20':'bg-slate-900 text-slate-200 rounded-3xl rounded-tl-none border border-white/5'} text-[13px] leading-relaxed break-words glass">
+                            <span class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-1 px-2">${m.user}</span>
+                            <div class="message-bubble ${isMe?'bg-indigo-600 text-white rounded-3xl rounded-tr-none':'bg-slate-900 text-slate-200 rounded-3xl rounded-tl-none border border-white/5'} text-[13px] glass">
                                 ${decrypt(m.text)}
                             </div>`;
                         win.appendChild(div);
@@ -519,7 +433,25 @@
             });
         }
 
-        window.del = async (id) => { if(confirm("Erase entry from mainframe?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', id)); };
+        // --- GLOBAL ACTIONS ---
+
+        window.switchChat = (target, dm) => {
+            currentTarget = target;
+            isDM = dm;
+            document.getElementById('currentChannelName').innerText = target;
+            document.getElementById('headerIcon').setAttribute('data-lucide', dm ? 'user' : 'hash');
+            loadMessages();
+            lucide.createIcons();
+            if (window.innerWidth <= 768) window.toggleSidebar();
+        };
+
+        window.toggleSidebar = () => {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        };
+
+        window.openModal = (id) => document.getElementById(id).style.display = 'flex';
+        window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 
         document.getElementById('chatForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -536,54 +468,81 @@
             const user = document.getElementById('authUsername').value.trim();
             const pass = document.getElementById('authPassword').value.trim();
             if(!user || !pass) return;
+
             const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user);
             const snap = await getDoc(userRef);
-            if (user === ADMIN_NAME && pass === ADMIN_PASS) {
-                if(!snap.exists()) await setDoc(userRef, { username: user, isBanned: false, isOnline: true, role: 'admin' });
-                else await updateDoc(userRef, { role: 'admin' });
-                startApp(user);
-                return;
-            }
-            if(document.getElementById('signupTab').classList.contains('bg-indigo-600')) {
-                if(snap.exists()) alert("Identifier taken.");
-                else {
-                    await setDoc(userRef, { username: user, password: encrypt(pass), isBanned: false, isOnline: true, role: 'user' });
+
+            if (document.getElementById('loginTab').classList.contains('bg-indigo-600')) {
+                // Login
+                if (snap.exists() && snap.data().password === pass) {
+                    if (snap.data().isBanned) return alert("Account Exiled.");
                     startApp(user);
+                } else {
+                    alert("Invalid Credentials.");
                 }
             } else {
-                if(snap.exists()) {
-                    const d = snap.data();
-                    if(d.isBanned) alert("Terminal restricted.");
-                    else if(decrypt(d.password) === pass) startApp(user);
-                    else alert("Access denied.");
-                } else alert("Unknown ID.");
+                // Register
+                if (snap.exists()) return alert("Identifier Taken.");
+                await setDoc(userRef, { username: user, password: pass, role: 'user', isBanned: false, isOnline: true });
+                startApp(user);
             }
         };
 
-        document.getElementById('logoutBtn').onclick = async () => {
-            await updateStatus(false);
-            localStorage.removeItem('ghost_session');
-            location.reload();
-        };
-
+        // UI Tabs
         document.getElementById('loginTab').onclick = () => {
-            document.getElementById('loginTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white shadow-lg transition-all';
-            document.getElementById('signupTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500';
+            document.getElementById('loginTab').className = "flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white";
+            document.getElementById('signupTab').className = "flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500";
         };
         document.getElementById('signupTab').onclick = () => {
-            document.getElementById('signupTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white shadow-lg transition-all';
-            document.getElementById('loginTab').className = 'flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500';
+            document.getElementById('signupTab').className = "flex-1 py-3 text-[11px] font-black uppercase rounded-xl bg-indigo-600 text-white";
+            document.getElementById('loginTab').className = "flex-1 py-3 text-[11px] font-black uppercase rounded-xl text-slate-500";
         };
 
+        // Channel Creation
         document.getElementById('confirmCreateBtn').onclick = async () => {
             const name = document.getElementById('newGroupNameInput').value.trim();
             if(!name) return;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', name), { name });
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), { name });
             closeModal('createNodeModal');
             document.getElementById('newGroupNameInput').value = '';
         };
 
-        init();
+        window.deleteGroup = async (id) => {
+            if(confirm("Destroy channel?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', id));
+        };
+
+        // Admin Dash Actions
+        window.toggleBan = async (u, b) => await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u), { isBanned: !b });
+        window.deleteUser = async (u) => confirm(`Purge ${u}?`) && await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u));
+        window.openAdminDashboard = () => {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
+                const list = document.getElementById('dashUserList');
+                list.innerHTML = '';
+                let count = 0;
+                snap.forEach(d => {
+                    const u = d.data();
+                    if(u.username === currentUser) return;
+                    count++;
+                    list.innerHTML += `
+                        <div class="bg-slate-900/80 p-6 rounded-3xl border border-white/5 glass flex flex-col gap-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-white font-black">${u.username}</span>
+                                <span class="text-[8px] bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded uppercase font-black">${u.role}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="window.toggleBan('${u.username}', ${u.isBanned})" class="py-2 text-[8px] font-black uppercase rounded-xl ${u.isBanned?'bg-emerald-600':'bg-red-600'} text-white">
+                                    ${u.isBanned?'Restore':'Exile'}
+                                </button>
+                                <button onclick="window.deleteUser('${u.username}')" class="py-2 text-[8px] font-black uppercase rounded-xl bg-slate-800 text-slate-400">Purge</button>
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('dashUserCount').innerText = count;
+            });
+            window.openModal('adminDashboardModal');
+        };
+
+        lucide.createIcons();
     </script>
 </body>
 </html>
